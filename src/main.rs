@@ -298,17 +298,26 @@ fn snake_growth(
     }
 }
 
-fn food_spawner(mut commands: Commands, materials: Res<Materials>) {
+fn food_spawner(mut commands: Commands, materials: Res<Materials>, positions: Query<&Position>) {
+    let mut new_food_pos: Position;
+    loop {
+        new_food_pos = Position {
+            x: (random::<f32>() * ARENA_WIDTH as f32) as i32,
+            y: (random::<f32>() * ARENA_HEIGHT as f32) as i32,
+        };
+
+        if positions.iter().all(|position| *position != new_food_pos) {
+            break;
+        }
+    }
+
     commands
         .spawn_bundle(SpriteBundle {
             material: materials.food_material.clone(),
             ..Default::default()
         })
         .insert(Food)
-        .insert(Position {
-            x: (random::<f32>() * ARENA_WIDTH as f32) as i32,
-            y: (random::<f32>() * ARENA_HEIGHT as f32) as i32,
-        })
+        .insert(new_food_pos)
         .insert(Size::square(0.8));
 }
 
