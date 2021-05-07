@@ -17,6 +17,7 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .insert_resource(SnakeSegments::default())
         .insert_resource(LastTailPosition::default())
+        .insert_resource(LastHeadDirection::default())
         .add_event::<GrowthEvent>()
         .add_event::<GameOverEvent>()
         .add_startup_system(setup.system())
@@ -112,7 +113,11 @@ fn game_over(
     }
 }
 
-fn snake_movement_input(keyboard_input: Res<Input<KeyCode>>, mut heads: Query<&mut SnakeHead>) {
+fn snake_movement_input(
+    keyboard_input: Res<Input<KeyCode>>,
+    last_head_direction: Res<LastHeadDirection>,
+    mut heads: Query<&mut SnakeHead>,
+) {
     if let Some(mut head) = heads.iter_mut().next() {
         let dir: Direction = if keyboard_input.pressed(KeyCode::Left) {
             Direction::Left
@@ -125,7 +130,7 @@ fn snake_movement_input(keyboard_input: Res<Input<KeyCode>>, mut heads: Query<&m
         } else {
             head.direction
         };
-        if dir != head.direction.opposite() {
+        if dir != last_head_direction.0.opposite() {
             head.direction = dir;
         }
     }
@@ -136,6 +141,7 @@ fn snake_movement(
     mut heads: Query<(Entity, &SnakeHead)>,
     mut positions: Query<&mut Position>,
     mut last_tail_position: ResMut<LastTailPosition>,
+    mut last_head_direction: ResMut<LastHeadDirection>,
     mut game_over_writer: EventWriter<GameOverEvent>,
 ) {
     if let Some((head_entity, head)) = heads.iter_mut().next() {
@@ -147,6 +153,8 @@ fn snake_movement(
 
         last_tail_position.0 = Some(*segment_positions.last().unwrap());
         let mut head_pos = positions.get_mut(head_entity).unwrap();
+
+        last_head_direction.0 = head.direction;
 
         match &head.direction {
             Direction::Left => {
@@ -184,6 +192,9 @@ fn snake_movement(
 #[derive(Default)]
 struct LastTailPosition(Option<Position>);
 
+#[derive(Default)]
+struct LastHeadDirection(Direction);
+
 #[derive(SystemLabel, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum SnakeMovement {
     Input,
@@ -198,6 +209,12 @@ enum Direction {
     Up,
     Right,
     Down,
+}
+
+impl Default for Direction {
+    fn default() -> Self {
+        Direction::Up
+    }
 }
 
 impl Direction {
